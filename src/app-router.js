@@ -107,6 +107,7 @@
       return;
     }
 
+    var isSameRoute = (this.activeRoute === route);
     this.activeRoute.removeAttribute('active');
     route.setAttribute('active', 'active');
     this.activeRoute = route;
@@ -118,8 +119,12 @@
     var isTemplate = route.hasAttribute('template');
     var isElement = !isTemplate;
 
+    // only update data binding if it's the same route, is a custom element, and <app-route persistOnNavigation>
+    if (isSameRoute && isElement && route.hasAttribute('persistOnNavigation')) {
+      this.updateActiveRouteDataBinding(routePath, urlPath, isRegExp, eventDetail);
+    }
     // import custom element
-    if (isElement && importUri) {
+    else if (isElement && importUri) {
       this.importAndActivateCustomElement(importUri, elementName, routePath, urlPath, isRegExp, eventDetail);
     }
     // pre-loaded custom element
@@ -134,6 +139,19 @@
     else if (isTemplate && !importUri) {
       this.activateTemplate(route, eventDetail);
     }
+  };
+
+  // updateActiveRouteDataBinding(routePath, urlPath, isRegExp, eventDetail) - Update data binding on an existing route
+  router.updateActiveRouteDataBinding = function(routePath, urlPath, isRegExp, eventDetail) {
+    var routeArgs = this.routeArguments(routePath, urlPath, window.location.href, isRegExp, this.getAttribute('pathType'));
+    var resourceEl = this.activeRouteContent.firstChild;
+    for (var arg in routeArgs) {
+      if (routeArgs.hasOwnProperty(arg)) {
+        resourceEl[arg] = routeArgs[arg];
+      }
+    }
+    fire('activate-route-end', eventDetail, this);
+    fire('activate-route-end', eventDetail, eventDetail.route);
   };
 
   // importAndActivateCustomElement(importUri, elementName, routePath, urlPath, isRegExp, eventDetail) - Import the custom element then replace the active route
